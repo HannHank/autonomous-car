@@ -2,7 +2,7 @@
 #include <SPI.h>
 #include <Wire.h> //I2C Arduino Library
 #include <TinyGPS++.h>
-#include <SoftwareSerial.h>//Test
+#include <SoftwareSerial.h>
 #include <SparkFun_MAG3110.h>
 MAG3110 mag = MAG3110();
 const int centreX = 160;
