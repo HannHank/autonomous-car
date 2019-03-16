@@ -1,16 +1,25 @@
+//necessary library's
 #include <Arduino.h>
 #include <SPI.h>
-#include <Wire.h> //I2C Arduino Library
+#include <Wire.h> 
 #include <TinyGPS++.h>
 #include <SoftwareSerial.h>
 #include <SparkFun_MAG3110.h>
+#include <Adafruit_GFX.h> 
+#include <MCUFRIEND_kbv.h>
+#include <Adafruit_Sensor.h>
+#include <Adafruit_HMC5883_U.h>
+//end
 MAG3110 mag = MAG3110();
+//const for compass Draw_Compass_Rose
 const int centreX = 160;
 const int centreY = 120;
 const int diameter = 100;
 const int centreX1 = 160;
 const int centreY1 = 120;
 const int diameter1 = 100;
+//end
+//defin the steering thinks
 #define TURN_LEFT 1
 #define TURN_RIGHT 2
 #define TURN_STRAIGHT 99
@@ -27,15 +36,9 @@ int headingError;
 int sat = 0;
 float kmh = 0;
 long olddistance = 0;
-#include <Adafruit_Sensor.h>
-#include <Adafruit_HMC5883_U.h>
-
-/* Assign a unique ID to this sensor at the same time */
 
 
-#include <Adafruit_GFX.h> // Hardware-specific library
-#include <MCUFRIEND_kbv.h>
-////GPS zeug
+////GPS stuff
 static const int RXPin = 51, TXPin = 53;
 static const uint32_t GPSBaud = 9600;
 double LONDON_LAT, LONDON_LON;
@@ -87,26 +90,28 @@ void setup()
 {
 
   Serial.begin(9600);
-  tft.reset();
+  tft.reset(); //reset display
   uint16_t identifier = tft.readID(); // Found ILI9325 LCD driver
   tft.begin(identifier);
   tft.setRotation(1);
   tft.fillScreen(BLACK);
   //Initialize I2C communications
-  Wire.begin();
-  mag.initialize();
+  Wire.begin(); // for the Compass
+  mag.initialize(); // start Compass
   // Put the HMC5883 IC into the correct operating mode
   last_dx = centreX;
   last_dy = centreY;
   last_dx1 = centreX1;
   last_dy1 = centreY1;
   ////////////////////////////////////////////////////////////////
-  ss.begin(GPSBaud);
+  ss.begin(GPSBaud); //gps start's
   ///////////////////////////////////////////////////////////////
 }
 
 void loop()
 {
+
+  //calibrating the Compass
    int x, y, z;
    while(!mag.isCalibrated()) //If we're not calibrated
   {
@@ -149,17 +154,18 @@ void loop()
   if(mag.readHeading() < 0.00){
     status = 1;
   }
- 
+//end 
+//read heading 
 mag.readMag(&x, &y, &z);
   GPS();
   
   int azimuth;
   int currentHeading;
   int targetHeading;
-  double lat = 51.000799;
+  double lat = 51.000799; // seting test position 
   double lng = 13.683110;
-  Draw_Compass_Rose();
-  float heading = atan2((double)x, (double)y);
+  Draw_Compass_Rose(); //draw compass Rose at the tft
+  float heading = atan2((double)x, (double)y);//caculating the heading 
   // Once you have your heading, you must then add your 'Declination Angle', which is the 'Error' of the magnetic field in your location.
   // Find yours here: http://www.magnetic-declination.com/
   // Mine is: -13* 2' W, which is ~13 Degrees, or (which we need) 0.22 radians
@@ -168,12 +174,14 @@ mag.readMag(&x, &y, &z);
   heading += declinationAngle;
 
   // Correct for when signs are reversed.
-  if (heading < 0)
+  if (heading < 0){
     heading += 2 * PI;
+   }
 
   // Check for wrap due to addition of declination.
-  if (heading > 2 * PI)
+  if (heading > 2 * PI){
     heading -= 2 * PI;
+  }
   //
   // Convert radians to degrees for readability.
   float headingDegrees = heading * 180 / M_PI;
@@ -280,7 +288,7 @@ mag.readMag(&x, &y, &z);
   last_dy1 = dy1;
   delay(25);
 
-
+  //printing GPS stuff
   printInt(gps.satellites.value(), gps.satellites.isValid(), 5);
   printInt(gps.hdop.value(), gps.hdop.isValid(), 5);
   printFloat(gps.location.lat(), gps.location.isValid(), 11, 6);
@@ -291,9 +299,9 @@ mag.readMag(&x, &y, &z);
   printFloat(gps.course.deg(), gps.course.isValid(), 7, 2);
   printFloat(gps.speed.kmph(), gps.speed.isValid(), 6, 2);
   printStr(gps.course.isValid() ? TinyGPSPlus::cardinal(gps.course.value()) : "*** ", 6);
-
-
-  unsigned long distanceKmToLondon =
+ //end 
+ //calculate the distance to the destination 
+  //unsigned long distanceKmToLondon = *have to look why I wrote this line XD
     (unsigned long)TinyGPSPlus::distanceBetween(
       gps.location.lat(),
       gps.location.lng(),
@@ -323,7 +331,7 @@ mag.readMag(&x, &y, &z);
   //Serial.println("aktuell");
   ///  Serial.println(headingDegrees);
 }
-
+//calculate the Bearing 
 double getBearing(double lat1, double lng1, double lat2, double lng2)
 {
   lat1 = radians(lat1);
@@ -344,7 +352,7 @@ double getBearing(double lat1, double lng1, double lat2, double lng2)
 
   return fmod((degrees(atan2(dLng, dPhi)) + 360.0), 360.0);
 }
-
+//do GPS and tft stuff
 void display_item(int x, int y, String token, int txt_colour, int txt_size)
 {
   tft.setCursor(x, y);
