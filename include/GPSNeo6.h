@@ -9,7 +9,7 @@ geoloc currentLoc;
 geoloc homeLoc;
 geoloc tagLoc;
 
-static const int RXPin = 51, TXPin = 53;
+static const int RXPin = 53, TXPin = 51;
 static const uint32_t GPSBaud = 9600;
 double LONDON_LAT, LONDON_LON;
 
