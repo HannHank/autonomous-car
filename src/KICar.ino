@@ -110,7 +110,6 @@ void loop()
     float dist = geoDistance(lat,lon,destinationlat,destinationlon);
     Serial.print("dist =");
     Serial.println(dist);
-  
     
 
   
