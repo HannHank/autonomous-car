@@ -114,8 +114,8 @@ mag.readMag(&x, &y, &z);
   int azimuth;
   int currentHeading;
   int targetHeading;
-  double lat = 51.000832; // seting test position
-  double lng = 13.682485;
+  double lat =******; // seting test position
+  double lng = *********;
   Draw_Compass_Rose(); //draw compass Rose at the tft
   float heading = atan2((double)x, (double)y);//caculating the heading 
   // Once you have your heading, you must then add your 'Declination Angle', which is the 'Error' of the magnetic field in your location.
@@ -270,7 +270,7 @@ mag.readMag(&x, &y, &z);
 
   if (millis() > 5000 && gps.charsProcessed() < 10)
     // Serial.println(F("No GPS data received: check wiring"));
-    Serial.println(getBearing(gps.location.lat(), gps.location.lng(), 51.000832, 13.682485));
+    Serial.println(getBearing(gps.location.lat(), gps.location.lng(), ********, *********);
   //Serial.println("aktuell");
   ///  Serial.println(headingDegrees);
 }
