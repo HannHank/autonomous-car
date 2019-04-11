@@ -39,14 +39,14 @@ struct geoloc way3;
 struct geoloc way4;
 struct geoloc way5; 
 void initializeData(){
-way1.lat = *********;
-way1.lon = *********;
-way2.lat = *********;
-way2.lon = *********;
-way3.lat = *********;
-way3.lon = *********;
-way4.lat = *********;
-way4.lon = *********;
-way5.lat = *********; 
-way5.lon = *********;
+way1.lat =111111111111;
+way1.lon = 1111111111;
+way2.lat = 11111111111111;
+way2.lon = 11111111111111;
+way3.lat = 11111111111111;
+way3.lon = 11111111111111;
+way4.lat = 11111111111111;
+way4.lon = 11111111111111;
+way5.lat = 11111111111111; 
+way5.lon = 11111111111111;
 }  

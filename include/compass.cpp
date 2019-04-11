@@ -30,8 +30,12 @@ float compass_x_offset=0, compass_y_offset=0, compass_z_offset=0,compass_gain_fa
 float compass_x_gainError=1,compass_y_gainError=1,compass_z_gainError=1,bearing=0;
 int compass_x=0,compass_y=0,compass_z=0;
 int compass_debug=0;
-
-
+ struct Vector
+{
+    float XAxis;
+    float YAxis;
+    float ZAxis;
+};
 
 
 
@@ -368,7 +372,14 @@ void compass_scalled_reading(){
 
 }
 
+void readNormalize1()
+{
+    v.XAxis = compass_x*compass_gain_fact*compass_x_gainError+compass_x_offset;
+    v.YAxis = compass_y*compass_gain_fact*compass_y_gainError+compass_y_offset;
+    v.ZAxis = compass_z*compass_gain_fact*compass_z_gainError+compass_z_offset;
 
+    return v;
+}
 void compass_heading(){
   compass_scalled_reading();
   
@@ -385,3 +396,5 @@ void compass_heading(){
   
 
 }
+
+

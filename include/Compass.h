@@ -10,7 +10,7 @@ Ver: 0.2 beta --- Debug feature included
   #define compass.h
   
   #include "compass.h"
-  
+ 
   extern float bearing;
   extern float compass_x_scalled;
   extern float compass_y_scalled;
@@ -26,6 +26,7 @@ Ver: 0.2 beta --- Debug feature included
   void compass_init(int gain);
   void compass_scalled_reading();
   void compass_heading();
-  
+  Vector readNormalize1();
   
 #endif
+
