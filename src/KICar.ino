@@ -1,15 +1,18 @@
 //necessary library's
 #include <Arduino.h>
+#include <SPI.h>
 #include <math.h>   
 #include <SoftwareSerial.h>
 #include <Wire.h>
 #include <Servo.h>
 
-//#include <HMC5883L.h>//
+#include <oled.h>
+
+#include <HMC5883L.h>//
 #include <ADXL345.h>
 
 //#include <GPSNeo6.h>
-#include <Compass.h>
+//#include <Compass.h>
 #include <GPSNeom8n.h>
 #include <Data.h>
 
@@ -19,11 +22,11 @@ Servo Lenkung;
 
 //////Compass stuff
 // compass compass;
+HMC5883L compass;
 ADXL345 accelerometer;
 
 float heading1;
 float heading2;
-
 
 
 
@@ -49,47 +52,35 @@ void setup()
   setupGPSm8n();
   ///////////////////////////////////////////////////////////////
 
-  Wire.begin();
-  compass_x_offset = 122.17;
-  compass_y_offset = 230.08;
-  compass_z_offset = 389.85;
-  compass_x_gainError = 1.12;
-  compass_y_gainError = 1.13;
-  compass_z_gainError = 1.03;
-  
-  
-  
-  compass_init(2);
-  
-  compass_offset_calibration(3);
-  //  if (!accelerometer.begin())
-  // {
-  //   delay(500);
-  // }
+  if (!accelerometer.begin())
+  {
+    delay(500);
+  }
 
-  // accelerometer.setRange(ADXL345_RANGE_2G);
+  accelerometer.setRange(ADXL345_RANGE_2G);
 
-  // // Initialize Initialize HMC5883L
-  // while (!compass.begin())
-  // {
-  //   delay(500);
-  // }
+  // Initialize Initialize HMC5883L
+  while (!compass.begin())
+  {
+    delay(500);
+  }
 
-  // // Set measurement range
-  // compass.setRange(HMC5883L_RANGE_1_3GA);
+  // Set measurement range
+  compass.setRange(HMC5883L_RANGE_1_3GA);
 
-  // // Set measurement mode
-  // compass.setMeasurementMode(HMC5883L_CONTINOUS);
+  // Set measurement mode
+  compass.setMeasurementMode(HMC5883L_CONTINOUS);
 
-  // // Set data rate
-  // compass.setDataRate(HMC5883L_DATARATE_30HZ);
+  // Set data rate
+  compass.setDataRate(HMC5883L_DATARATE_30HZ);
 
-  // // Set number of samples averaged
-  // compass.setSamples(HMC5883L_SAMPLES_8);
+  // Set number of samples averaged
+  compass.setSamples(HMC5883L_SAMPLES_8);
 
-  // // Set calibration offset. See HMC5883L_calibration.ino
-  // compass.setOffset(0, 0); 
+  // Set calibration offset. See HMC5883L_calibration.ino
+  compass.setOffset(-177,-257); 
 
+  start_up();
 
   Lenkung.attach(9);
   Lenkung.write(90);
@@ -163,6 +154,13 @@ void loop()
     int gps = fix.satellites;
     Serial.print("GPS = ");
     Serial.println(gps);
+    display.clearDisplay();
+    display.setTextColor(WHITE);ö
+    display.setCursor(0,50);
+    display.println("SATS =");
+    display.setCursor(20,50);
+    display.println(gps);
+    display.display();
     if(geoDistance(lat,lon,way1.lat,way1.lon) < 1){
      destinationlat = way2.lat;
       destinationlon = way2.lon; 
@@ -183,6 +181,8 @@ void loop()
       destinationlat = way6.lat;
       destinationlon = way6.lon; 
       }
+       destinationlat = way6.lat;
+      destinationlon = way6.lon; 
     float dist = geoDistance(lat,lon,destinationlat,destinationlon);
     // Serial.print("dist =");
     // Serial.println(dist);
@@ -192,7 +192,7 @@ void loop()
   // Serial.println(targetHeading);
   }
   
-  Vector mag = readNormalize1();
+  Vector mag = compass.readNormalize();
   Vector acc = accelerometer.readScaled();
 
   // Calculate headings
@@ -227,13 +227,13 @@ void loop()
 
   double targetHeading = getBearing(lat,lon,destinationlat,destinationlon);
     
-  heading2 = 10.10;
+
 
   float turn = targetHeading - heading2;
   while (turn < -180) turn += 360;
   while (turn >  180) turn -= 360;
 
-  int autoSteer = map(turn, 180, -180, 180, 0);
+  int autoSteer = map(turn, 180, -180, 180, 0); //Hier habe ich Veränderungen vorgenommen
   autoSteer = constrain(autoSteer, 50, 130);
 
   float angleError = abs(turn);
