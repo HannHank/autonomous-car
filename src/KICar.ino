@@ -24,11 +24,14 @@ Servo Lenkung;
 // compass compass;
 HMC5883L compass;
 ADXL345 accelerometer;
+#include <offset.h>
 
 float heading1;
 float heading2;
 
-
+//gps
+int gpsSat = 0;
+float dist = 0.00;
 
 float geoDistance(double lat, double lon, double lat2, double lon2) {
   const float R = 6371000; // km
@@ -45,13 +48,13 @@ float geoDistance(double lat, double lon, double lat2, double lon2) {
 
 void setup()
 {
- 
+
 
   
   ////////////////////////////////////////////////////////////////
   setupGPSm8n();
   ///////////////////////////////////////////////////////////////
-
+  pinMode(4,INPUT_PULLUP);
   if (!accelerometer.begin())
   {
     delay(500);
@@ -78,7 +81,10 @@ void setup()
   compass.setSamples(HMC5883L_SAMPLES_8);
 
   // Set calibration offset. See HMC5883L_calibration.ino
-  compass.setOffset(-177,-257); 
+ //
+ //compass.setOffset(0,0); 
+  calculate_offsets();
+  compass.setOffset(offX,offY);  
 
   start_up();
 
@@ -89,8 +95,9 @@ void setup()
    initializeData();
 
   //first waypoint
-  destinationlat = way1.lat;
-  destinationlon = way1.lon;
+  destinationlat = way6.lat;
+  destinationlon = way6.lon;
+
 
 }
 // Tilt compensation
@@ -141,7 +148,8 @@ float correctAngle(float heading)
 
 void loop()
 {
-
+  //clear display
+  display.clearDisplay();
   //calibrating the Compass
    t = millis();
  
@@ -151,39 +159,40 @@ void loop()
     gps_fix fix = gps.read();
     lat = fix.latitude ();    
     lon = fix.longitude();
-    int gps = fix.satellites;
+    gpsSat = fix.satellites;
     Serial.print("GPS = ");
-    Serial.println(gps);
-    display.clearDisplay();
-    display.setTextColor(WHITE);ö
-    display.setCursor(0,50);
-    display.println("SATS =");
-    display.setCursor(20,50);
-    display.println(gps);
-    display.display();
-    if(geoDistance(lat,lon,way1.lat,way1.lon) < 1){
-     destinationlat = way2.lat;
-      destinationlon = way2.lon; 
-          }
-    if(geoDistance(lat,lon,way2.lat,way2.lon) < 1){
-      destinationlat = way3.lat;
-      destinationlon = way3.lon; 
-      }
-       if(geoDistance(lat,lon,way3.lat,way3.lon) < 1){
-      destinationlat = way4.lat;
-      destinationlon = way4.lon; 
-      }
-       if(geoDistance(lat,lon,way4.lat,way4.lon) < 1){
-      destinationlat = way5.lat;
-      destinationlon = way5.lon; 
-      }
-        if(geoDistance(lat,lon,way5.lat,way5.lon) < 1){
-      destinationlat = way6.lat;
-      destinationlon = way6.lon; 
-      }
-       destinationlat = way6.lat;
-      destinationlon = way6.lon; 
-    float dist = geoDistance(lat,lon,destinationlat,destinationlon);
+    Serial.println(gpsSat);
+    
+   
+    
+    // if(geoDistance(lat,lon,way1.lat,way1.lon) < 1){
+    //  destinationlat = way2.lat;
+    //   destinationlon = way2.lon; 
+    //       }
+    // if(geoDistance(lat,lon,way2.lat,way2.lon) < 1){
+    //   destinationlat = way3.lat;
+    //   destinationlon = way3.lon; 
+    //   }
+    //    if(geoDistance(lat,lon,way3.lat,way3.lon) < 1){
+    //   destinationlat = way4.lat;
+    //   destinationlon = way4.lon; 
+    //   }
+    //    if(geoDistance(lat,lon,way4.lat,way4.lon) < 1){
+    //   destinationlat = way5.lat;
+    //   destinationlon = way5.lon; 
+    //   }
+    //     if(geoDistance(lat,lon,way5.lat,way5.lon) < 1){
+    //   destinationlat = way6.lat;
+    //   destinationlon = way6.lon; 
+    //   }
+    int val = digitalRead(4);
+    if(val == 1){
+         destinationlat =lat;
+         destinationlon = lon; 
+    }
+     
+    dist = geoDistance(lat,lon,destinationlat,destinationlon);
+   
     // Serial.print("dist =");
     // Serial.println(dist);
     
@@ -229,7 +238,7 @@ void loop()
     
 
 
-  float turn = targetHeading - heading2;
+  float turn = targetHeading - heading1;
   while (turn < -180) turn += 360;
   while (turn >  180) turn -= 360;
 
@@ -245,15 +254,36 @@ void loop()
 
   if(autoSteer > 92){
     Serial.println("Links");
+    display.setTextColor(WHITE);
+    display.setCursor(0,20);
+    display.print("links");
+    
   }
   else if(autoSteer < 88){
-    Serial.println("Rechts");
+    Serial.println("rechts");
+    display.setTextColor(WHITE);
+    display.setCursor(0,20);
+    display.print("rechts");
+    
   }
   else{
     Serial.println("Geradeaus");
+    display.setTextColor(WHITE);
+    display.setCursor(0,20);
+    display.print("Geradeaus");
+    
   }
   Lenkung.write(autoSteer);
- 
+  
+  //print GPS Data
+  display.setTextColor(WHITE);
+  display.setCursor(0,0);
+  display.print("SATS =");
+  display.print(gpsSat);
+  display.setCursor(0,10);
+  display.print("dist =");
+  display.print(dist);
+  display.display();
 }
 //calculate the Bearing 
 double getBearing(double lat1, double lng1, double lat2, double lng2)

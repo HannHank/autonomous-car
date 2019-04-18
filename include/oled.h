@@ -15,6 +15,8 @@ Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
 #define LOGO_WIDTH    16
 
 
+
+
 void start_up(){
     Serial.println("ok");
     if(!display.begin(SSD1306_SWITCHCAPVCC, 0x3C)) { // Address 0x3C for 128x32
@@ -35,3 +37,4 @@ void start_up(){
     display.display();
 
 }
+
