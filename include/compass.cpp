@@ -96,7 +96,7 @@ void compass_offset_calibration(int select){
   // ***************************************************************************************** 
   if (select == 1 | select == 3){ // User input in the function
  // Configuring the Control register for Positive Bais mode
-  Serial.println("Calibrating the Magnetometer ....... Gain");
+  //Serial.println("Calibrating the Magnetometer ....... Gain");
   Wire.beginTransmission(compass_address);
   Wire.write(0x00);
   Wire.write(0b01110001); // bit configuration = 0 A A DO2 DO1 DO0 MS1 MS2
@@ -168,12 +168,12 @@ void compass_offset_calibration(int select){
   compass_z_gainError = (float)((compass_Z_excitation/abs(compass_z_scalled))+compass_z_gainError)/2;
   
   
-  Serial.print("x_gain_offset = ");
-  Serial.println(compass_x_gainError);
-  Serial.print("y_gain_offset = ");
-  Serial.println(compass_y_gainError);
-  Serial.print("z_gain_offset = ");
-  Serial.println(compass_z_gainError);
+  // Serial.print("x_gain_offset = ");
+  // Serial.println(compass_x_gainError);
+  // Serial.print("y_gain_offset = ");
+  // Serial.println(compass_y_gainError);
+  // Serial.print("z_gain_offset = ");
+  // Serial.println(compass_z_gainError);
   
   }
   
@@ -198,9 +198,9 @@ void compass_offset_calibration(int select){
   // *****************************************************************************************
   // Offset estimation
   // *****************************************************************************************
-   if (select == 2 | select == 3){// User input in the function
-   Serial.println("Calibrating the Magnetometer ....... Offset");
-    Serial.println("Please rotate the magnetometer 2 or 3 times in complete circules with in one minute ............. ");
+  //  if (select == 2 | select == 3){// User input in the function
+  //  Serial.println("Calibrating the Magnetometer ....... Offset");
+  //   Serial.println("Please rotate the magnetometer 2 or 3 times in complete circules with in one minute ............. ");
     
     for(byte i=0;i<10;i++){   // Disregarding first few data
          compass_read_XYZdata();
@@ -213,25 +213,25 @@ void compass_offset_calibration(int select){
     Debug code ------------------------------
     */
     if (compass_debug == 1){
-      Serial.println("Starting Debug data in ");
-      delay(1000);
-      Serial.println("3");
-      delay(1000);
-      Serial.println("2");
-      delay(1000);
-      Serial.println("1");
-      delay(1000);
-      Serial.println("0");
-      Serial.println();
+      // Serial.println("Starting Debug data in ");
+      // delay(1000);
+      // Serial.println("3");
+      // delay(1000);
+      // Serial.println("2");
+      // delay(1000);
+      // Serial.println("1");
+      // delay(1000);
+      // Serial.println("0");
+      // Serial.println();
       for(byte i=0;i<10;i++){   
-         Serial.print("*");
+        // Serial.print("*");
       }
-      Serial.println("*");
-      Serial.println("Debug -- (Offset Calibration)");
+      //Serial.println("*");
+      //Serial.println("Debug -- (Offset Calibration)");
       for(byte i=0;i<10;i++){  
-         Serial.print("*");
+        // Serial.print("*");
       }
-      Serial.println("*");
+      //Serial.println("*");
     }
     // End Debug code
   
@@ -246,11 +246,11 @@ void compass_offset_calibration(int select){
       compass_z_scalled=(float)compass_z*compass_gain_fact*compass_z_gainError;
       
       if (compass_debug == 1){  //------------------ Debug Data
-        Serial.print(compass_x_scalled);
-        Serial.print("\t");
-        Serial.print(compass_y_scalled);
-        Serial.print("\t");
-        Serial.println(compass_z_scalled);
+        // Serial.print(compass_x_scalled);
+        // Serial.print("\t");
+        // Serial.print(compass_y_scalled);
+        // Serial.print("\t");
+        // Serial.println(compass_z_scalled);
         }//--------------------------------- End Debug Data
   
       x_max = max(x_max,compass_x_scalled);
@@ -269,16 +269,16 @@ void compass_offset_calibration(int select){
     Debug code ------------------------------
     */
     if (compass_debug == 1){
-      Serial.println();
+     // Serial.println();
       for(byte i=0;i<10;i++){   
          Serial.print("*");
       }
-      Serial.println("*");
-      Serial.println("End Debug -- (Offset Calibration)");
+     // Serial.println("*");
+     // Serial.println("End Debug -- (Offset Calibration)");
       for(byte i=0;i<10;i++){   
-         Serial.print("*");
+     //    Serial.print("*");
       }
-      Serial.println("*");
+     // Serial.println("*");
     }
     // End Debug code
   
@@ -287,15 +287,15 @@ void compass_offset_calibration(int select){
     compass_z_offset = ((z_max-z_min)/2)-z_max;
     
     
-    Serial.print("Offset x  = ");
-    Serial.print(compass_x_offset);
-    Serial.println(" mG");
-    Serial.print("Offset y  = ");
-    Serial.print(compass_y_offset);
-    Serial.println(" mG");
-    Serial.print("Offset z  = ");
-    Serial.print(compass_z_offset);
-    Serial.println(" mG");
+    // Serial.print("Offset x  = ");
+    // Serial.print(compass_x_offset);
+    // Serial.println(" mG");
+    // Serial.print("Offset y  = ");
+    // Serial.print(compass_y_offset);
+    // Serial.println(" mG");
+    // Serial.print("Offset z  = ");
+    // Serial.print(compass_z_offset);
+    // Serial.println(" mG");
     
   } 
  
@@ -355,9 +355,9 @@ void compass_init(int gain){
   // Writing the register value 0000 0011 for Idel
   Wire.endTransmission();
   
-  Serial.print("Gain updated to  = ");
-  Serial.print(compass_gain_fact);
-  Serial.println(" mG/bit");
+  //Serial.print("Gain updated to  = ");
+  //Serial.print(compass_gain_fact);
+  //Serial.println(" mG/bit");
     
 }
 

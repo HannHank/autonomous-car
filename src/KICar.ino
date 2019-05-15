@@ -1,21 +1,20 @@
 //necessary library's
 #include <Arduino.h>
 #include <SPI.h>
-#include <math.h>   
+#include <math.h>
 #include <SoftwareSerial.h>
 #include <Wire.h>
 #include <Servo.h>
 
 #include <oled.h>
 
-#include <HMC5883L.h>//
+#include <HMC5883L.h> //
 #include <ADXL345.h>
 
 //#include <GPSNeo6.h>
 //#include <Compass.h>
 #include <GPSNeom8n.h>
 #include <Data.h>
-
 
 byte PWM_PIN = 3;
 Servo Lenkung;
@@ -28,33 +27,103 @@ ADXL345 accelerometer;
 
 float heading1;
 float heading2;
-
+int point = 0;
 //gps
 int gpsSat = 0;
 float dist = 0.00;
-
-float geoDistance(double lat, double lon, double lat2, double lon2) {
+//Funktion zum berechnen der Distanz
+float geoDistance(double lat, double lon, double lat2, double lon2)
+{
   const float R = 6371000; // km
   float p1 = lat * DEGTORAD;
   float p2 = lat2 * DEGTORAD;
-  float dp = (lat2-lat) * DEGTORAD;
-  float dl = (lon2-lon) * DEGTORAD;
+  float dp = (lat2 - lat) * DEGTORAD;
+  float dl = (lon2 - lon) * DEGTORAD;
 
-  float x = sin(dp/2) * sin(dp/2) + cos(p1) * cos(p2) * sin(dl/2) * sin(dl/2);
-  float y = 2 * atan2(sqrt(x), sqrt(1-x));
+  float x = sin(dp / 2) * sin(dp / 2) + cos(p1) * cos(p2) * sin(dl / 2) * sin(dl / 2);
+  float y = 2 * atan2(sqrt(x), sqrt(1 - x));
 
   return R * y;
 }
+//Berechnen der Kompass Daten OHNE die Neigung zu korrigieren 
+float noTiltCompensate(Vector mag)
+{
+  float heading = atan2(mag.YAxis, mag.XAxis);
+  return heading;
+}
+//Berechnen der Kompass Daten MIT Neigung korrigiert 
+float tiltCompensate(Vector mag, Vector normAccel)
+{
+  // Pitch & Roll
 
+  float roll;
+  float pitch;
+
+  roll = asin(normAccel.YAxis);
+  pitch = asin(-normAccel.XAxis);
+
+  if (roll > 0.78 || roll < -0.78 || pitch > 0.78 || pitch < -0.78)
+  {
+    return -1000;
+  }
+
+  // Some of these are used twice, so rather than computing them twice in the algorithem we precompute them before hand.
+  float cosRoll = cos(roll);
+  float sinRoll = sin(roll);
+  float cosPitch = cos(pitch);
+  float sinPitch = sin(pitch);
+
+  // Tilt compensation
+  float Xh = mag.XAxis * cosPitch + mag.ZAxis * sinPitch;
+  float Yh = mag.XAxis * sinRoll * sinPitch + mag.YAxis * cosRoll - mag.ZAxis * sinRoll * cosPitch;
+
+  float heading = atan2(Yh, Xh);
+
+  return heading;
+}
+
+//Der Winkel des Magnetsensors auslesen
+float correctAngle(float heading)
+{
+  if (heading < 0)
+  {
+    heading += 2 * PI;
+  }
+  if (heading > 2 * PI)
+  {
+    heading -= 2 * PI;
+  }
+
+  return heading;
+}
+//Den Winkel zwischen aktuelle Position und Ziel berechnen
+double getBearing(double lat1, double lng1, double lat2, double lng2)
+{
+  lat1 = radians(lat1);
+  lng1 = radians(lng1);
+  lat2 = radians(lat2);
+  lng2 = radians(lng2);
+
+  double dLng = lng2 - lng1;
+  double dPhi = log(tan(lat2 / 2.0 + PI / 4.0) / tan(lat1 / 2.0 + PI / 4.0));
+
+  if (abs(dLng) > PI)
+  {
+    if (dLng > 0.0)
+      dLng = -(2.0 * PI - dLng);
+    else
+      dLng = (2.0 * PI + dLng);
+  }
+
+  return fmod((degrees(atan2(dLng, dPhi)) + 360.0), 360.0);
+}
 void setup()
 {
 
-
-  
   ////////////////////////////////////////////////////////////////
   setupGPSm8n();
   ///////////////////////////////////////////////////////////////
-  pinMode(4,INPUT_PULLUP);
+  pinMode(4, INPUT_PULLUP);
   if (!accelerometer.begin())
   {
     delay(500);
@@ -81,126 +150,99 @@ void setup()
   compass.setSamples(HMC5883L_SAMPLES_8);
 
   // Set calibration offset. See HMC5883L_calibration.ino
- //
- //compass.setOffset(0,0); 
+  //
+  //compass.setOffset(0,0);
   calculate_offsets();
-  compass.setOffset(offX,offY);  
+  compass.setOffset(offX, offY);
 
   start_up();
 
   Lenkung.attach(9);
   Lenkung.write(90);
 
-///
-   initializeData();
+  ///
+  initializeData();
 
   //first waypoint
-  destinationlat = way6.lat;
-  destinationlon = way6.lon;
-
-
-}
-// Tilt compensation
-float noTiltCompensate(Vector mag)
-{
-  float heading = atan2(mag.YAxis, mag.XAxis);
-  return heading;
-}
- 
-float tiltCompensate(Vector mag, Vector normAccel)
-{
-  // Pitch & Roll 
-
-  float roll;
-  float pitch;
-
-  roll = asin(normAccel.YAxis);
-  pitch = asin(-normAccel.XAxis);
-
-  if (roll > 0.78 || roll < -0.78 || pitch > 0.78 || pitch < -0.78)
-  {
-    return -1000;
-  }
-
-  // Some of these are used twice, so rather than computing them twice in the algorithem we precompute them before hand.
-  float cosRoll = cos(roll);
-  float sinRoll = sin(roll);  
-  float cosPitch = cos(pitch);
-  float sinPitch = sin(pitch);
-
-  // Tilt compensation
-  float Xh = mag.XAxis * cosPitch + mag.ZAxis * sinPitch;
-  float Yh = mag.XAxis * sinRoll * sinPitch + mag.YAxis * cosRoll - mag.ZAxis * sinRoll * cosPitch;
-
-  float heading = atan2(Yh, Xh);
-
-  return heading;
+  destinationlat = way1.lat;
+  destinationlon = way1.lon;
+  point = 1;
 }
 
-// Correct angle
-float correctAngle(float heading)
-{
-  if (heading < 0) { heading += 2 * PI; }
-  if (heading > 2 * PI) { heading -= 2 * PI; }
-
-  return heading;
-}
 
 void loop()
 {
   //clear display
   display.clearDisplay();
   //calibrating the Compass
-   t = millis();
- 
+  t = millis();
+
   float load;
- 
-  if (gps.available( gpsPort )) {
+
+  if (gps.available(gpsPort))
+  {
     gps_fix fix = gps.read();
-    lat = fix.latitude ();    
+    lat = fix.latitude();
     lon = fix.longitude();
+    print(             fix.satellites       , fix.valid.satellites, 3             );
+    print(             fix.latitude ()      , fix.valid.location  , 10, 6         );
+    print(             fix.longitude()      , fix.valid.location  , 11, 6         );
+    
+    // print(dist  , 123,3);
+    DEBUG_PORT.println();
     gpsSat = fix.satellites;
-    Serial.print("GPS = ");
-    Serial.println(gpsSat);
-    
-   
-    
-    // if(geoDistance(lat,lon,way1.lat,way1.lon) < 1){
-    //  destinationlat = way2.lat;
-    //   destinationlon = way2.lon; 
-    //       }
-    // if(geoDistance(lat,lon,way2.lat,way2.lon) < 1){
+    dist = geoDistance(lat, lon,51.001275, 13.682028); 
+
+    //Serial.print("GPS = ");
+    // Serial.println(gpsSat);
+
+    // if (geoDistance(lat, lon, way1.lat, way1.lon) < 1)
+    // {
+    //   destinationlat = way2.lat;
+    //   destinationlon = way2.lon;
+    //   point = 1;
+    // }
+    // if (geoDistance(lat, lon, way2.lat, way2.lon) < 1)
+    // {
     //   destinationlat = way3.lat;
-    //   destinationlon = way3.lon; 
-    //   }
-    //    if(geoDistance(lat,lon,way3.lat,way3.lon) < 1){
+    //   destinationlon = way3.lon;
+    //   point = 2;
+    // }
+    // if (geoDistance(lat, lon, way3.lat, way3.lon) < 1)
+    // {
     //   destinationlat = way4.lat;
-    //   destinationlon = way4.lon; 
-    //   }
-    //    if(geoDistance(lat,lon,way4.lat,way4.lon) < 1){
+    //   destinationlon = way4.lon;
+    //   point = 3;
+    // }
+    // if (geoDistance(lat, lon, way4.lat, way4.lon) < 1)
+    // {
     //   destinationlat = way5.lat;
-    //   destinationlon = way5.lon; 
-    //   }
-    //     if(geoDistance(lat,lon,way5.lat,way5.lon) < 1){
+    //   destinationlon = way5.lon;
+    //   point = 4;
+    // }
+    // if (geoDistance(lat, lon, way5.lat, way5.lon) < 1)
+    // {
     //   destinationlat = way6.lat;
-    //   destinationlon = way6.lon; 
-    //   }
-    int val = digitalRead(4);
-    if(val == 1){
-         destinationlat =lat;
-         destinationlon = lon; 
-    }
-     
-    dist = geoDistance(lat,lon,destinationlat,destinationlon);
-   
-    // Serial.print("dist =");
-    // Serial.println(dist);
+    //   destinationlon = way6.lon;
+    //   point = 5;
+    // }
+    // int val = digitalRead(4);
+    // if(val == 1){
+    //      destinationlat =lat;
+    //      destinationlon = lon;
+    // }
+
+    //dist = geoDistance(lat, lon, destinationlat, destinationlon);
+  
     
 
-  
-  // Serial.println(targetHeading);
+
+    // Serial.print("dist =");
+    // Serial.println(dist);
+
+    // Serial.println(targetHeading);
   }
-  
+
   Vector mag = compass.readNormalize();
   Vector acc = accelerometer.readScaled();
 
@@ -227,20 +269,20 @@ void loop()
   heading2 = correctAngle(heading2);
 
   // Convert to degrees
-  heading1 = heading1 * 180/M_PI; 
-  heading2 = heading2 * 180/M_PI; 
-  Serial.print("No = ");
-  Serial.print(heading1);
-  Serial.print("with = ");
-  Serial.println(heading2);
+  heading1 = heading1 * 180 / M_PI;
+  heading2 = heading2 * 180 / M_PI;
+  //Serial.print("No = ");
+  //Serial.print(heading1);
+  //Serial.print("with = ");
+  //Serial.println(heading2);
 
-  double targetHeading = getBearing(lat,lon,destinationlat,destinationlon);
-    
-
+    // Serial.println(gpsSat);
+    // Serial.println(gpsSat);
+  double targetHeading = getBearing(lat, lon,51.001275, 13.682028);
 
   float turn = targetHeading - heading1;
   while (turn < -180) turn += 360;
-  while (turn >  180) turn -= 360;
+  while (turn > 180)  turn -= 360;
 
   int autoSteer = map(turn, 180, -180, 180, 0); //Hier habe ich Veränderungen vorgenommen
   autoSteer = constrain(autoSteer, 50, 130);
@@ -252,58 +294,39 @@ void loop()
   // Serial.print("AutoSteer");
   // Serial.println(autoSteer);''
 
-  if(autoSteer > 92){
-    Serial.println("Links");
+  if (autoSteer > 92)
+  {
+    //Serial.println("Links");
     display.setTextColor(WHITE);
-    display.setCursor(0,20);
+    display.setCursor(0, 20);
     display.print("links");
-    
   }
-  else if(autoSteer < 88){
-    Serial.println("rechts");
+  else if (autoSteer < 88)
+  {
+    //Serial.println("rechts");
     display.setTextColor(WHITE);
-    display.setCursor(0,20);
+    display.setCursor(0, 20);
     display.print("rechts");
-    
   }
-  else{
-    Serial.println("Geradeaus");
+  else
+  {
+    // Serial.println("Geradeaus");
     display.setTextColor(WHITE);
-    display.setCursor(0,20);
+    display.setCursor(0, 20);
     display.print("Geradeaus");
-    
   }
   Lenkung.write(autoSteer);
-  
+
   //print GPS Data
   display.setTextColor(WHITE);
-  display.setCursor(0,0);
+  display.setCursor(0, 0);
   display.print("SATS =");
   display.print(gpsSat);
-  display.setCursor(0,10);
+  display.setCursor(0, 10);
   display.print("dist =");
   display.print(dist);
+  display.setCursor(40, 20);
+  display.print(point);
   display.display();
-}
-//calculate the Bearing 
-double getBearing(double lat1, double lng1, double lat2, double lng2)
-{
-  lat1 = radians(lat1);
-  lng1 = radians(lng1);
-  lat2 = radians(lat2);
-  lng2 = radians(lng2);
-
-  double dLng = lng2 - lng1;
-  double dPhi = log(tan(lat2 / 2.0 + PI / 4.0) / tan(lat1 / 2.0 + PI / 4.0));
-
-  if (abs(dLng) > PI)
-  {
-    if (dLng > 0.0)
-      dLng = -(2.0 * PI - dLng);
-    else
-      dLng = (2.0 * PI + dLng);
-  }
-
-  return fmod((degrees(atan2(dLng, dPhi)) + 360.0), 360.0);
 }
 
