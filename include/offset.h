@@ -34,7 +34,9 @@ while(calibrate_compass){
   // Calculate offsets
   offX = (maxX + minX)/2;
   offY = (maxY + minY)/2;
-
+//  Serial.print(offX);
+//  Serial.print(" : ");
+//  Serial.println(offY);
   // Serial.print(mag.XAxis);
   // Serial.print(":");
   // Serial.print(mag.YAxis);

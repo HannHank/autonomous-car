@@ -135,6 +135,7 @@ void setup()
   while (!compass.begin())
   {
     delay(500);
+    Serial.println("Compass begin");
   }
 
   // Set measurement range
@@ -151,7 +152,7 @@ void setup()
 
   // Set calibration offset. See HMC5883L_calibration.ino
   //
-  //compass.setOffset(0,0);
+  //compass.setOffset(0,0)
   calculate_offsets();
   compass.setOffset(offX, offY);
 
@@ -176,8 +177,6 @@ void loop()
   display.clearDisplay();
   //calibrating the Compass
   t = millis();
-
-  float load;
 
   if (gps.available(gpsPort))
   {

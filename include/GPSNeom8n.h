@@ -118,7 +118,7 @@ void setupGPSm8n()
 
   repeat( '-', 133 );
 
-  gpsPort.begin(9600);
+  gpsPort.begin(38400);
 }
 void printGPS()
 {
