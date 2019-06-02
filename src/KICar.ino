@@ -282,7 +282,20 @@ void loop()
   float turn = targetHeading - heading1;
   while (turn < -180) turn += 360;
   while (turn > 180)  turn -= 360;
-
+  if(turn < 0){
+    Serial.print("kleiner Null");
+    Serial.print(turn);
+    turn = turn *-1;
+    Serial.print("jetzt =");
+    Serial.println(turn);
+  }
+  else{
+    Serial.print("größer Null");
+    Serial.print(turn);
+    turn = turn *-1;
+    Serial.print("jetzt =");
+    Serial.println(turn);
+  }
   int autoSteer = map(turn, 180, -180, 180, 0); //Hier habe ich Veränderungen vorgenommen
   autoSteer = constrain(autoSteer, 50, 130);
 
