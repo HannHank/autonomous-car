@@ -119,11 +119,13 @@ double getBearing(double lat1, double lng1, double lat2, double lng2)
 }
 void setup()
 {
-
+  //Pin defin
+  pinMode(4, INPUT_PULLUP);
+  //end
   ////////////////////////////////////////////////////////////////
   setupGPSm8n();
   ///////////////////////////////////////////////////////////////
-  pinMode(4, INPUT_PULLUP);
+  
   if (!accelerometer.begin())
   {
     delay(500);
@@ -135,7 +137,7 @@ void setup()
   while (!compass.begin())
   {
     delay(500);
-    Serial.println("Compass begin");
+   // Serial.println("Compass begin");
   }
 
   // Set measurement range
@@ -174,6 +176,7 @@ void setup()
 void loop()
 {
   //clear display
+  
   display.clearDisplay();
   //calibrating the Compass
   t = millis();
@@ -186,12 +189,18 @@ void loop()
     print(             fix.satellites       , fix.valid.satellites, 3             );
     print(             fix.latitude ()      , fix.valid.location  , 10, 6         );
     print(             fix.longitude()      , fix.valid.location  , 11, 6         );
-    
+    int pin = digitalRead(4);
+    if(pin == LOW){
+      way1.lat = lat;
+      way1.lon = lon;
+      Serial.println("Set homepoint");
+     }
     // print(dist  , 123,3);
     DEBUG_PORT.println();
     gpsSat = fix.satellites;
-    dist = geoDistance(lat, lon,51.001275, 13.682028); 
-
+    dist = geoDistance(lat, lon,51.001256 ,13.682089); 
+    Serial.print(" Dist ");
+    Serial.println(dist);
     //Serial.print("GPS = ");
     // Serial.println(gpsSat);
 
@@ -245,7 +254,7 @@ void loop()
   Vector mag = compass.readNormalize();
   Vector acc = accelerometer.readScaled();
 
-  // Calculate headings
+//   // Calculate headings
   heading1 = noTiltCompensate(mag);
   heading2 = tiltCompensate(mag, acc);
 
@@ -259,7 +268,7 @@ void loop()
   // (+) Positive or (-) for negative
   // For Bytom / Poland declination angle is 4'26E (positive)
   // Formula: (deg + (min / 60.0)) / (180 / M_PI);
-  float declinationAngle = (4.0 + (26.0 / 60.0)) / (180 / M_PI);
+  float declinationAngle = (3.0 + (59.0 / 60.0)) / (180 / M_PI);
   heading1 += declinationAngle;
   heading2 += declinationAngle;
 
@@ -270,31 +279,34 @@ void loop()
   // Convert to degrees
   heading1 = heading1 * 180 / M_PI;
   heading2 = heading2 * 180 / M_PI;
-  //Serial.print("No = ");
-  //Serial.print(heading1);
-  //Serial.print("with = ");
-  //Serial.println(heading2);
+ 
+ 
+  
+    // Serial.println(gpsSat);
+    // Serial.println(gpsSat);
+  double targetHeading = getBearing(lat, lon,51.001256,  13.68208);
+  // Serial.print("Heading =");
+  // Serial.println(heading1);
+  // Serial.print("targetHeading =");
+  // Serial.println(targetHeading);
 
-    // Serial.println(gpsSat);
-    // Serial.println(gpsSat);
-  double targetHeading = getBearing(lat, lon,51.001275, 13.682028);
 
   float turn = targetHeading - heading1;
   while (turn < -180) turn += 360;
   while (turn > 180)  turn -= 360;
   if(turn < 0){
-    Serial.print("kleiner Null");
-    Serial.print(turn);
+    // Serial.print("kleiner Null");
+    // Serial.print(turn);
     turn = turn *-1;
-    Serial.print("jetzt =");
-    Serial.println(turn);
+    // Serial.print("jetzt =");
+    // Serial.println(turn);
   }
   else{
-    Serial.print("größer Null");
-    Serial.print(turn);
+  //  Serial.print("größer Null");
+   // Serial.print(turn);
     turn = turn *-1;
-    Serial.print("jetzt =");
-    Serial.println(turn);
+    //Serial.print("jetzt =");
+   // Serial.println(turn);
   }
   int autoSteer = map(turn, 180, -180, 180, 0); //Hier habe ich Veränderungen vorgenommen
   autoSteer = constrain(autoSteer, 50, 130);
@@ -309,36 +321,36 @@ void loop()
   if (autoSteer > 92)
   {
     //Serial.println("Links");
-    display.setTextColor(WHITE);
-    display.setCursor(0, 20);
-    display.print("links");
+    // display.setTextColor(WHITE);
+    // display.setCursor(0, 20);
+    // display.print("links");
   }
   else if (autoSteer < 88)
   {
     //Serial.println("rechts");
-    display.setTextColor(WHITE);
-    display.setCursor(0, 20);
-    display.print("rechts");
+    // display.setTextColor(WHITE);
+    // display.setCursor(0, 20);
+    // display.print("rechts");
   }
   else
   {
-    // Serial.println("Geradeaus");
-    display.setTextColor(WHITE);
-    display.setCursor(0, 20);
-    display.print("Geradeaus");
+    //Serial.println("Geradeaus");
+    // display.setTextColor(WHITE);
+    // display.setCursor(0, 20);
+    // display.print("Geradeaus");
   }
   Lenkung.write(autoSteer);
 
   //print GPS Data
-  display.setTextColor(WHITE);
-  display.setCursor(0, 0);
-  display.print("SATS =");
-  display.print(gpsSat);
-  display.setCursor(0, 10);
-  display.print("dist =");
-  display.print(dist);
-  display.setCursor(40, 20);
-  display.print(point);
-  display.display();
+  // display.setTextColor(WHITE);
+  // display.setCursor(0, 0);
+  // display.print("SATS =");
+  // display.print(gpsSat);
+  // display.setCursor(0, 10);
+  // display.print("dist =");
+  // display.print(dist);
+  // display.setCursor(40, 20);
+  // display.print(point);
+  // display.display();
 }
 
