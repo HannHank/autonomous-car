@@ -1,5 +1,6 @@
 //necessary library's
 #include <Arduino.h>
+#include <ArduinoJson.h>
 #include <SPI.h>
 #include <math.h>
 #include <SoftwareSerial.h>
@@ -7,13 +8,14 @@
 #include <Servo.h>
 
 #include <oled.h>
-
+#include <Path.h>
 #include <HMC5883L.h> //
 #include <ADXL345.h>
 
 //#include <GPSNeo6.h>
 //#include <Compass.h>
 #include <GPSNeom8n.h>
+#include <ultrasonic_Sensors.h>
 #include <Data.h>
 
 byte PWM_PIN = 3;
@@ -30,7 +32,7 @@ float heading2;
 int point = 0;
 //gps
 int gpsSat = 0;
-float dist = 0.00;
+long dist = 0;
 //Funktion zum berechnen der Distanz
 float geoDistance(double lat, double lon, double lat2, double lon2)
 {
@@ -45,13 +47,13 @@ float geoDistance(double lat, double lon, double lat2, double lon2)
 
   return R * y;
 }
-//Berechnen der Kompass Daten OHNE die Neigung zu korrigieren 
+//Berechnen der Kompass Daten OHNE die Neigung zu korrigieren
 float noTiltCompensate(Vector mag)
 {
   float heading = atan2(mag.YAxis, mag.XAxis);
   return heading;
 }
-//Berechnen der Kompass Daten MIT Neigung korrigiert 
+//Berechnen der Kompass Daten MIT Neigung korrigiert
 float tiltCompensate(Vector mag, Vector normAccel)
 {
   // Pitch & Roll
@@ -125,7 +127,7 @@ void setup()
   ////////////////////////////////////////////////////////////////
   setupGPSm8n();
   ///////////////////////////////////////////////////////////////
-  
+
   if (!accelerometer.begin())
   {
     delay(500);
@@ -137,7 +139,7 @@ void setup()
   while (!compass.begin())
   {
     delay(500);
-   // Serial.println("Compass begin");
+    // Serial.println("Compass begin");
   }
 
   // Set measurement range
@@ -153,6 +155,17 @@ void setup()
   compass.setSamples(HMC5883L_SAMPLES_8);
 
   // Set calibration offset. See HMC5883L_calibration.ino
+  // insert(51.001023,13.681800);
+  // insert(51.000966,13.681750);
+  
+  
+  //displayPath();
+
+ 
+  // print(destinationlon,true,8,6);
+  // Serial.print(" : ");
+  // Serial.print(destinationlon);
+  // DEBUG_PORT.println();
   //
   //compass.setOffset(0,0)
   calculate_offsets();
@@ -167,59 +180,88 @@ void setup()
   initializeData();
 
   //first waypoint
-  destinationlat = way1.lat;
-  destinationlon = way1.lon;
-  point = 1;
+  
+  // destinationlat = way1.lat;
+  // destinationlon = way1.lon;
+  // point = 1;
+  
 }
-
 
 void loop()
 {
   //clear display
-  
+
   display.clearDisplay();
   //calibrating the Compass
   t = millis();
-
+  if(Serial.available()){
+    String Route = Serial.readStringUntil('\n');
+    Serial.print("Daten bekommen = ");
+    Serial.println(Route);
+    if(Route == "clear_Route"){
+        deletList();
+        initializePath();
+        point = 0;
+    }
+    else{
+        DynamicJsonBuffer jsonBuffer;
+        JsonObject& root = jsonBuffer.parseObject(Route);
+        double dataLat = root[String("location")][String("lat")]; //reading the location lat from the json
+        double dataLon = root[String("location")][String("lng")]; //reading the location lng from the json
+        insert(dataLat,dataLon); //insert the location to the linked List
+        initializePath();
+        displayPath();
+    }
+  }
+   if(ptr != NULL){
   if (gps.available(gpsPort))
   {
     gps_fix fix = gps.read();
     lat = fix.latitude();
     lon = fix.longitude();
-    print(             fix.satellites       , fix.valid.satellites, 3             );
-    print(             fix.latitude ()      , fix.valid.location  , 10, 6         );
-    print(             fix.longitude()      , fix.valid.location  , 11, 6         );
-    int pin = digitalRead(4);
-    if(pin == LOW){
-      way1.lat = lat;
-      way1.lon = lon;
-      Serial.println("Set homepoint");
-     }
+    dist = geoDistance(lat, lon, ptr->lat, ptr->lon);
+    print(fix.satellites, fix.valid.satellites, 3);
+    print(fix.latitude(), fix.valid.location, 10, 6);
+    print(fix.longitude(), fix.valid.location, 11, 6);
+    print(dist, true, 4);
+    print(point,true, 3);
+    
+    // int pin = digitalRead(4);
+    // if(pin == LOW){
+    //   way1.lat = lat;
+    //   way1.lon = lon;
+    //   Serial.println("Set homepoint");
+    //  }
     // print(dist  , 123,3);
     DEBUG_PORT.println();
-    gpsSat = fix.satellites;
-    dist = geoDistance(lat, lon,51.001256 ,13.682089); 
-    Serial.print(" Dist ");
-    Serial.println(dist);
+    // gpsSat = fix.satellites;
+    // dist = geoDistance(lat, lon,destinationlat ,destinationlon);
+    // Serial.print(" Dist ");
+    // Serial.println(dist);
     //Serial.print("GPS = ");
     // Serial.println(gpsSat);
-
-    // if (geoDistance(lat, lon, way1.lat, way1.lon) < 1)
-    // {
-    //   destinationlat = way2.lat;
-    //   destinationlon = way2.lon;
-    //   point = 1;
-    // }
+    
+ 
+    if (dist <= 1)
+    { 
+      ptr = ptr->next; 
+      destinationlat = ptr->lat;
+      destinationlon = ptr->lon;
+      point += 1;
+      
+    }
+ 
+  
     // if (geoDistance(lat, lon, way2.lat, way2.lon) < 1)
     // {
-    //   destinationlat = way3.lat;
-    //   destinationlon = way3.lon;
+    //   destinationlat = way1.lat;
+    //   destinationlon = way1.lon;
     //   point = 2;
     // }
     // if (geoDistance(lat, lon, way3.lat, way3.lon) < 1)
     // {
-    //   destinationlat = way4.lat;
-    //   destinationlon = way4.lon;
+    //   destinationlat = way2.lat;
+    //   destinationlon = way2.lon;
     //   point = 3;
     // }
     // if (geoDistance(lat, lon, way4.lat, way4.lon) < 1)
@@ -241,9 +283,6 @@ void loop()
     // }
 
     //dist = geoDistance(lat, lon, destinationlat, destinationlon);
-  
-    
-
 
     // Serial.print("dist =");
     // Serial.println(dist);
@@ -254,7 +293,7 @@ void loop()
   Vector mag = compass.readNormalize();
   Vector acc = accelerometer.readScaled();
 
-//   // Calculate headings
+  //   // Calculate headings
   heading1 = noTiltCompensate(mag);
   heading2 = tiltCompensate(mag, acc);
 
@@ -279,35 +318,34 @@ void loop()
   // Convert to degrees
   heading1 = heading1 * 180 / M_PI;
   heading2 = heading2 * 180 / M_PI;
- 
- 
-  
-    // Serial.println(gpsSat);
-    // Serial.println(gpsSat);
-  double targetHeading = getBearing(lat, lon,51.001256,  13.68208);
+
+  // Serial.println(gpsSat);
+  // Serial.println(gpsSat);
+  double targetHeading = getBearing(lat, lon, ptr->lat, ptr->lon);
   // Serial.print("Heading =");
   // Serial.println(heading1);
   // Serial.print("targetHeading =");
   // Serial.println(targetHeading);
 
-
   float turn = targetHeading - heading1;
-  while (turn < -180) turn += 360;
-  while (turn > 180)  turn -= 360;
-  if(turn < 0){
-    // Serial.print("kleiner Null");
-    // Serial.print(turn);
-    turn = turn *-1;
-    // Serial.print("jetzt =");
-    // Serial.println(turn);
-  }
-  else{
-  //  Serial.print("größer Null");
-   // Serial.print(turn);
-    turn = turn *-1;
-    //Serial.print("jetzt =");
-   // Serial.println(turn);
-  }
+  while (turn < -180)
+    turn += 360;
+  while (turn > 180)
+    turn -= 360;
+  // if(turn < 0){
+  //   // Serial.print("kleiner Null");
+  //   // Serial.print(turn);
+  //   turn = turn *-1;
+  //   // Serial.print("jetzt =");
+  //   // Serial.println(turn);
+  // }
+  // else{
+  // //  Serial.print("größer Null");
+  //  // Serial.print(turn);
+  //   turn = turn *-1;
+  //   //Serial.print("jetzt =");
+  //  // Serial.println(turn);
+  // }
   int autoSteer = map(turn, 180, -180, 180, 0); //Hier habe ich Veränderungen vorgenommen
   autoSteer = constrain(autoSteer, 50, 130);
 
@@ -352,5 +390,21 @@ void loop()
   // display.setCursor(40, 20);
   // display.print(point);
   // display.display();
+   }
+   else{ //when no route is in the linked list
+      Lenkung.write(90);
+       if (gps.available(gpsPort))
+  {
+    gps_fix fix = gps.read();
+    lat = fix.latitude();
+    lon = fix.longitude();
+    dist = 0;
+    print(fix.satellites, fix.valid.satellites, 3);
+    print(fix.latitude(), fix.valid.location, 10, 6);
+    print(fix.longitude(), fix.valid.location, 11, 6);
+    print(dist, true, 3);
+    print(point,true, 3);
+    DEBUG_PORT.println();
+   }
 }
-
+}
